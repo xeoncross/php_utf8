@@ -7,6 +7,8 @@
  * environments. Requires either mbstring or iconv to work!
  *
  * @author David Pennington <xeoncross.com>
+ * @link http://sourceforge.net/projects/phputf8/
+ * @link http://github.com/Xeoncross/php_utf8
  * @license http://opensource.org/licenses/mit-license.php MIT License
  */
 
@@ -89,8 +91,8 @@ if( ! extension_loaded('mbstring'))
 
 
 	/**
-	 * UTF-8 aware alternative to substr
-	 * Return part of a string given character offset (and optionally length)
+	 * UTF-8 aware alternative to strpos
+	 * Find position of first occurrence of a string
 	 *
 	 * @param string $haystack to search
 	 * @param string $needle substring to look for
@@ -175,6 +177,20 @@ function mb_str_split($string, $split_len = 1)
 function mb_substr_replace($string, $replacement, $start, $length = NULL )
 {
 	return mb_substr($str, 0, $start) . $replacement . mb_substr($str, $length + 1);
+}
+
+
+/**
+ * UTF-8 aware alternative to strrev
+ * Reverse a string
+ *
+ * @param string $string to reverse
+ * @return string
+ */
+function mb_strrev($string)
+{
+	preg_match_all('/./us', $string, $ar);
+	return join('',array_reverse($ar[0]));
 }
 
 
@@ -393,24 +409,25 @@ function sanitize_filename($string)
 
 
 /**
- * Convert a string from any character set to a valid UTF-8 string
+ * Convert a string from one encoding to another encoding (Defaults to UTF-8)
  *
  * @param string $string to convert
+ * @param string $to_encoding you want the string in
  * @param string $from_encoding that string is in
  * @return string
  */
-function to_utf8($string, $from_encoding = 'UTF-8')
+function encode($string, $to_encoding = 'UTF-8', $from_encoding = 'UTF-8')
 {
 	// ASCII-7 is valid UTF-8 already
-	if (is_ascii($string))
-		return;
+	if ($to_encoding === 'UTF-8' AND is_ascii($string))
+		return $string;
 
 	if(function_exists('iconv'))
 	{
 		// Disable notices
 		$ER = error_reporting(~E_NOTICE);
 
-		$string = iconv($from_encoding, 'UTF-8//IGNORE', $string);
+		$string = iconv($from_encoding, $to_encoding.'//TRANSLIT', $string);
 
 		// Turn notices back on
 		error_reporting($ER);
@@ -419,38 +436,6 @@ function to_utf8($string, $from_encoding = 'UTF-8')
 	}
 	else
 	{
-		return mb_convert_encoding($string, "UTF-8", mb_detect_encoding($string, "auto", TRUE));
-	}
-}
-
-
-/**
- * Convert a string from any character set to a valid ASCII-7 string
- *
- * @param string $string to convert
- * @param string $from_encoding that string is in
- * @return string
- */
-function to_ascii($string, $from_encoding = 'UTF-8')
-{
-	// Don't bother if it is already ASCII-7
-	if (is_ascii($string))
-		return;
-
-	if(function_exists('iconv'))
-	{
-		// Disable notices
-		$ER = error_reporting(~E_NOTICE);
-
-		$string = iconv($from_encoding, 'ASCII//TRANSLIT', $string);
-
-		// Turn notices back on
-		error_reporting($ER);
-
-		return $string;
-	}
-	else
-	{
-		return mb_convert_encoding($string, "ASCII", mb_detect_encoding($string, "auto", TRUE));
+		return mb_convert_encoding($string, $to_encoding, mb_detect_encoding($string, "auto", TRUE));
 	}
 }
